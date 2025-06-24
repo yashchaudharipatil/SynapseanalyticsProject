@@ -1,0 +1,312 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "yashsynpase"
+		},
+		"yashsynpase-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'yashsynpase-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:yashsynpase.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"externalDatalake_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://synapsearsstorageaccount.dfs.core.windows.net/"
+		},
+		"yashsynpase-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://managsynapseyash369.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/externalDatalake')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('externalDatalake_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/yashsynpase-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('yashsynpase-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/yashsynpase-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('yashsynpase-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/CETAS')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE EXTERNAL TABLE revenue_cetas\nWITH (\n    LOCATION='cetas_revenue',\n    DATA_SOURCE=raw_ext_source,\n    FILE_FORMAT=parquet_format\n)\nAS\nSELECT \n    CAST(Dealer_ID AS VARCHAR(200)) AS Dealer_ID,\n    CAST(Model_ID AS VARCHAR(200)) AS Model_ID,\n    CAST(Branch_ID AS VARCHAR(200)) AS Branch_ID,\n    CAST(Date_ID AS VARCHAR(200)) AS Date_ID,\n    CAST(Units_Sold AS BIGINT) AS Units_Sold,\n    CAST(Revenue AS BIGINT) AS Revenue\nFROM\nOPENROWSET(\n    BULK 'revenue/SalesData.csv',\n    DATA_SOURCE='raw_ext_source',\n    FORMAT='CSV',\n    PARSER_VERSION='2.0',\n    HEADER_ROW=TRUE\n) AS rows;\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "YashSeverless",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DistributedTable')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "--Round Robin Table \n\nCREATE TABLE round_table\n(\n    id INT,\n    name VARCHAR(4000),\n    salary INT\n)\nWITH\n(\n    DISTRIBUTION = ROUND_ROBIN,\n    CLUSTERED INDEX (id)\n);\n\n\nINSERT INTO round_table\nVALUES\n(1,'Yash',200000)\n\nSELECT * FROM round_table\n\n\n\n\n\n\n\n\n\n---- Replacate Table \n\nCREATE SCHEMA gold;\n\nCREATE TABLE gold.dim_product\n(\n    dim_key_prod INT,\n    prod_id INT,\n    prod_name VARCHAR(2000)\n)\nWITH\n(\n    DISTRIBUTION = REPLICATE,\n    CLUSTERED COLUMNSTORE INDEX\n);\n\n\n\n---- Hash Tbale\n\nCREATE TABLE gold.facttable\n(\n    dim_key_prod INT,\n    revenue INT,\n    cost INT\n)\nWITH\n(\n    DISTRIBUTION =HASH(dim_key_prod)\n)\n\n\n\n\n\n\n\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "YashDedicatedpool",
+						"poolName": "YashDedicatedpool"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/External_Res')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "_\n-- ✅ STEP 2: Create Credential using Managed Identity\nCREATE DATABASE SCOPED CREDENTIAL yashcreds\nWITH\n    IDENTITY = 'Managed Identity';\n\n-- ✅ STEP 3: Create External Data Source pointing to ADLS Gen2\nCREATE EXTERNAL DATA SOURCE raw_ext_source\nWITH (\n    LOCATION = 'https://synapsearsstorageaccount.dfs.core.windows.net/raw',\n    CREDENTIAL = yashcreds\n);\n\nCREATE EXTERNAL DATA SOURCE raw_ext_source_abfss\nWITH (\n    LOCATION = 'abfss://raw@synapsearsstorageaccount.dfs.core.windows.net',\n    CREDENTIAL = yashcreds\n);\n\n\nCREATE EXTERNAL FILE FORMAT parquet_format\nWITH (\n    FORMAT_TYPE = PARQUET\n);\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "YashDedicatedpool",
+						"poolName": "YashDedicatedpool"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/OpenRowSet')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE MASTER KEY ENCRYPTION BY PASSWORD ='Yash@123456789'\n\n\n-- ✅ STEP 2: Create Credential using Managed Identity\nCREATE DATABASE SCOPED CREDENTIAL yashcreds\nWITH\n    IDENTITY = 'Managed Identity';\n\n-- ✅ STEP 3: Create External Data Source pointing to ADLS Gen2\nCREATE EXTERNAL DATA SOURCE raw_ext_source\nWITH (\n    LOCATION = 'https://synapsearsstorageaccount.dfs.core.windows.net/raw',\n    CREDENTIAL = yashcreds\n);\n\n-- ✅ STEP 4: Create External CSV File Format\nCREATE EXTERNAL FILE FORMAT csv_format\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        FIRST_ROW = 2,\n        USE_TYPE_DEFAULT = TRUE\n    )\n);\n\n-- ✅ STEP 5: Create External Parquet File Format\nCREATE EXTERNAL FILE FORMAT parquet_format\nWITH (\n    FORMAT_TYPE = PARQUET\n);\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "YashSeverless",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/PolyBase_Ctas')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE EXTERNAL TABLE parquet_table\n(\n    Dealer_ID   VARCHAR(200),\n    Model_ID    VARCHAR(200),\n    Branch_ID   VARCHAR(200),\n    Date_ID     VARCHAR(200),\n    Units_Sold  BIGINT,  -- ✅ match Parquet long\n    Revenue     BIGINT \n)\n\nWITH \n(\n    LOCATION='/cetas_revenue',\n    DATA_SOURCE=raw_ext_source_abfss,\n    FILE_FORMAT=parquet_format\n)\n\n----CETAS(Polybase)\n\n\nCREATE TABLE poly_table\nWITH(\n    DISTRIBUTION=ROUND_ROBIN\n)\nAS\nselect * FROM parquet_table",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "YashDedicatedpool",
+						"poolName": "YashDedicatedpool"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Scenario')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE EXTERNAL TABLE revenue_2\n(\n    Dealer_ID VARCHAR(2000),\n    Model_ID VARCHAR(2000),\n    Branch_ID VARCHAR(2000),\n    Date_ID VARCHAR(2000),\n    Units_Sold VARCHAR(2000),\n    Revenue VARCHAR(2000),\n)\nWITH \n(\n    LOCATION='revenue2',\n    DATA_SOURCE=raw_ext_source,\n    FILE_FORMAT=csv_format\n)\n\nSELECT * FROM revenue_2\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "YashSeverless",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Views')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "CREATE VIEW revenue_view\nAS\nSELECT \n*\nFROM\n    OPENROWSET(\n        BULK 'revenue',\n        DATA_SOURCE='raw_ext_source',\n        FORMAT='CSV',\n        PARSER_VERSION='2.0',\n        HEADER_ROW=TRUE\n    )AS Q1\n\n ",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "YashSeverless",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/copy_into')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "IF OBJECT_ID('dbo.copy_into_table', 'U') IS NOT NULL\n    DROP TABLE dbo.copy_into_table;\n\nCREATE TABLE dbo.copy_into_table\n(\n    Dealer_ID   VARCHAR(200),\n    Model_ID    VARCHAR(200),\n    Branch_ID   VARCHAR(200),\n    Date_ID     VARCHAR(200),\n    Units_Sold  BIGINT,  -- ✅ match Parquet long\n    Revenue     BIGINT   -- ✅ match Parquet long\n)\nWITH\n(\n    DISTRIBUTION = ROUND_ROBIN\n);\n\n\n\nCOPY INTO dbo.copy_into_table\nFROM 'https://synapsearsstorageaccount.dfs.core.windows.net/raw/cetas_revenue/'\nWITH\n(\n    FILE_TYPE = 'PARQUET',\n    CREDENTIAL = (IDENTITY = 'Managed Identity')\n);\n\n\nSELECT TOP 100 * FROM dbo.copy_into_table;\n\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "YashDedicatedpool",
+						"poolName": "YashDedicatedpool"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/create external tables')]",
+			"type": "Microsoft.Synapse/workspaces/sqlscripts",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"content": {
+					"query": "-- Step 0: Safe cleanup (no error if not exists)\nIF OBJECT_ID('dbo.revenue_ext_table', 'U') IS NOT NULL\n    DROP EXTERNAL TABLE dbo.revenue_ext_table;\n\nIF EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'csv_format')\n    DROP EXTERNAL FILE FORMAT csv_format;\n\n-- Step 1: Create External File Format\nCREATE EXTERNAL FILE FORMAT csv_format\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        FIRST_ROW = 2,\n        USE_TYPE_DEFAULT = TRUE\n    )\n);\n\n-- Step 2: Create External Table\nCREATE EXTERNAL TABLE revenue_ext_table\n(\n    Dealer_ID   VARCHAR(1000),\n    Model_ID    VARCHAR(1000),\n    Branch_ID   VARCHAR(1000),\n    Date_ID     VARCHAR(1000),\n    Units_Sold  VARCHAR(1000),\n    Revenue     VARCHAR(1000)\n)\nWITH (\n    LOCATION = 'revenue',        -- Full file path is safer\n    DATA_SOURCE = raw_ext_source,\n    FILE_FORMAT = csv_format\n);\n\nSELECT * FROM revenue_ext_table\n",
+					"metadata": {
+						"language": "sql"
+					},
+					"currentConnection": {
+						"databaseName": "YashSeverless",
+						"poolName": "Built-in"
+					},
+					"resultLimit": 5000
+				},
+				"type": "SqlQuery"
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/YashDedicatedpool')]",
+			"type": "Microsoft.Synapse/workspaces/sqlPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"collation": "SQL_Latin1_General_CP1_CI_AS",
+				"maxSizeBytes": 263882790666240,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "swedencentral"
+		}
+	]
+}
