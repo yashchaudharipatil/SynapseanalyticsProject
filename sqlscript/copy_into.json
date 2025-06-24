@@ -1,0 +1,17 @@
+{
+	"name": "copy_into",
+	"properties": {
+		"content": {
+			"query": "IF OBJECT_ID('dbo.copy_into_table', 'U') IS NOT NULL\n    DROP TABLE dbo.copy_into_table;\n\nCREATE TABLE dbo.copy_into_table\n(\n    Dealer_ID   VARCHAR(200),\n    Model_ID    VARCHAR(200),\n    Branch_ID   VARCHAR(200),\n    Date_ID     VARCHAR(200),\n    Units_Sold  BIGINT,  -- ✅ match Parquet long\n    Revenue     BIGINT   -- ✅ match Parquet long\n)\nWITH\n(\n    DISTRIBUTION = ROUND_ROBIN\n);\n\n\n\nCOPY INTO dbo.copy_into_table\nFROM 'https://synapsearsstorageaccount.dfs.core.windows.net/raw/cetas_revenue/'\nWITH\n(\n    FILE_TYPE = 'PARQUET',\n    CREDENTIAL = (IDENTITY = 'Managed Identity')\n);\n\n\nSELECT TOP 100 * FROM dbo.copy_into_table;\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashDedicatedpool",
+				"poolName": "YashDedicatedpool"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

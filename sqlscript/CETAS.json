@@ -1,0 +1,17 @@
+{
+	"name": "CETAS",
+	"properties": {
+		"content": {
+			"query": "CREATE EXTERNAL TABLE revenue_cetas\nWITH (\n    LOCATION='cetas_revenue',\n    DATA_SOURCE=raw_ext_source,\n    FILE_FORMAT=parquet_format\n)\nAS\nSELECT \n    CAST(Dealer_ID AS VARCHAR(200)) AS Dealer_ID,\n    CAST(Model_ID AS VARCHAR(200)) AS Model_ID,\n    CAST(Branch_ID AS VARCHAR(200)) AS Branch_ID,\n    CAST(Date_ID AS VARCHAR(200)) AS Date_ID,\n    CAST(Units_Sold AS BIGINT) AS Units_Sold,\n    CAST(Revenue AS BIGINT) AS Revenue\nFROM\nOPENROWSET(\n    BULK 'revenue/SalesData.csv',\n    DATA_SOURCE='raw_ext_source',\n    FORMAT='CSV',\n    PARSER_VERSION='2.0',\n    HEADER_ROW=TRUE\n) AS rows;\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashSeverless",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

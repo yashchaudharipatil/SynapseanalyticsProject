@@ -1,0 +1,17 @@
+{
+	"name": "External_Res",
+	"properties": {
+		"content": {
+			"query": "_\n-- ✅ STEP 2: Create Credential using Managed Identity\nCREATE DATABASE SCOPED CREDENTIAL yashcreds\nWITH\n    IDENTITY = 'Managed Identity';\n\n-- ✅ STEP 3: Create External Data Source pointing to ADLS Gen2\nCREATE EXTERNAL DATA SOURCE raw_ext_source\nWITH (\n    LOCATION = 'https://synapsearsstorageaccount.dfs.core.windows.net/raw',\n    CREDENTIAL = yashcreds\n);\n\nCREATE EXTERNAL DATA SOURCE raw_ext_source_abfss\nWITH (\n    LOCATION = 'abfss://raw@synapsearsstorageaccount.dfs.core.windows.net',\n    CREDENTIAL = yashcreds\n);\n\n\nCREATE EXTERNAL FILE FORMAT parquet_format\nWITH (\n    FORMAT_TYPE = PARQUET\n);\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashDedicatedpool",
+				"poolName": "YashDedicatedpool"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

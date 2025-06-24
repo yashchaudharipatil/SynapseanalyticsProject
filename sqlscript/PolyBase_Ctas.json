@@ -1,0 +1,17 @@
+{
+	"name": "PolyBase_Ctas",
+	"properties": {
+		"content": {
+			"query": "CREATE EXTERNAL TABLE parquet_table\n(\n    Dealer_ID   VARCHAR(200),\n    Model_ID    VARCHAR(200),\n    Branch_ID   VARCHAR(200),\n    Date_ID     VARCHAR(200),\n    Units_Sold  BIGINT,  -- ✅ match Parquet long\n    Revenue     BIGINT \n)\n\nWITH \n(\n    LOCATION='/cetas_revenue',\n    DATA_SOURCE=raw_ext_source_abfss,\n    FILE_FORMAT=parquet_format\n)\n\n----CETAS(Polybase)\n\n\nCREATE TABLE poly_table\nWITH(\n    DISTRIBUTION=ROUND_ROBIN\n)\nAS\nselect * FROM parquet_table",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashDedicatedpool",
+				"poolName": "YashDedicatedpool"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

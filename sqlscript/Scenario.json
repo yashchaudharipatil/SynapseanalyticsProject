@@ -1,0 +1,17 @@
+{
+	"name": "Scenario",
+	"properties": {
+		"content": {
+			"query": "CREATE EXTERNAL TABLE revenue_2\n(\n    Dealer_ID VARCHAR(2000),\n    Model_ID VARCHAR(2000),\n    Branch_ID VARCHAR(2000),\n    Date_ID VARCHAR(2000),\n    Units_Sold VARCHAR(2000),\n    Revenue VARCHAR(2000),\n)\nWITH \n(\n    LOCATION='revenue2',\n    DATA_SOURCE=raw_ext_source,\n    FILE_FORMAT=csv_format\n)\n\nSELECT * FROM revenue_2\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashSeverless",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

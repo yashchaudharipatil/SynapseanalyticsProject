@@ -1,0 +1,17 @@
+{
+	"name": "create external tables",
+	"properties": {
+		"content": {
+			"query": "-- Step 0: Safe cleanup (no error if not exists)\nIF OBJECT_ID('dbo.revenue_ext_table', 'U') IS NOT NULL\n    DROP EXTERNAL TABLE dbo.revenue_ext_table;\n\nIF EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'csv_format')\n    DROP EXTERNAL FILE FORMAT csv_format;\n\n-- Step 1: Create External File Format\nCREATE EXTERNAL FILE FORMAT csv_format\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        FIRST_ROW = 2,\n        USE_TYPE_DEFAULT = TRUE\n    )\n);\n\n-- Step 2: Create External Table\nCREATE EXTERNAL TABLE revenue_ext_table\n(\n    Dealer_ID   VARCHAR(1000),\n    Model_ID    VARCHAR(1000),\n    Branch_ID   VARCHAR(1000),\n    Date_ID     VARCHAR(1000),\n    Units_Sold  VARCHAR(1000),\n    Revenue     VARCHAR(1000)\n)\nWITH (\n    LOCATION = 'revenue',        -- Full file path is safer\n    DATA_SOURCE = raw_ext_source,\n    FILE_FORMAT = csv_format\n);\n\nSELECT * FROM revenue_ext_table\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashSeverless",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"name": "OpenRowSet",
+	"properties": {
+		"content": {
+			"query": "CREATE MASTER KEY ENCRYPTION BY PASSWORD ='Yash@123456789'\n\n\n-- ✅ STEP 2: Create Credential using Managed Identity\nCREATE DATABASE SCOPED CREDENTIAL yashcreds\nWITH\n    IDENTITY = 'Managed Identity';\n\n-- ✅ STEP 3: Create External Data Source pointing to ADLS Gen2\nCREATE EXTERNAL DATA SOURCE raw_ext_source\nWITH (\n    LOCATION = 'https://synapsearsstorageaccount.dfs.core.windows.net/raw',\n    CREDENTIAL = yashcreds\n);\n\n-- ✅ STEP 4: Create External CSV File Format\nCREATE EXTERNAL FILE FORMAT csv_format\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        FIRST_ROW = 2,\n        USE_TYPE_DEFAULT = TRUE\n    )\n);\n\n-- ✅ STEP 5: Create External Parquet File Format\nCREATE EXTERNAL FILE FORMAT parquet_format\nWITH (\n    FORMAT_TYPE = PARQUET\n);\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashSeverless",
+				"poolName": "Built-in"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
