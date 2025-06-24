@@ -1,0 +1,17 @@
+{
+	"name": "Platinum Load",
+	"properties": {
+		"content": {
+			"query": "CREATE EXTERNAL FILE FORMAT csv_format\nWITH (\n    FORMAT_TYPE = DELIMITEDTEXT,\n    FORMAT_OPTIONS (\n        FIELD_TERMINATOR = ',',\n        STRING_DELIMITER = '\"',\n        FIRST_ROW = 1\n    )\n);\n\n\nCREATE EXTERNAL TABLE platinum.dim_model_platinum\nWITH (\n    LOCATION = 'platinum/dim_model_platinum/',\n    DATA_SOURCE = gold_ext_source,\n    FILE_FORMAT = csv_format\n)\nAS\nSELECT *\nFROM ext_dim_model_gold\nWHERE Model_category = 'Hon';\n\n\n\n\n\nSELECT COUNT(*) FROM platinum.dim_model_platinum\nwhere Model_category='Hon';\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashDedicatedpool",
+				"poolName": "YashDedicatedpool"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

@@ -1,0 +1,17 @@
+{
+	"name": "dedicated Cred",
+	"properties": {
+		"content": {
+			"query": "CREATE DATABASE SCOPED CREDENTIAL carscreds\nWITH IDENTITY = 'Managed Identity';\n\n\n \nCREATE EXTERNAL DATA SOURCE gold_ext_source_1\nWITH (\n    LOCATION = 'abfss://gold@storageaccount336699.dfs.core.windows.net/',\n    CREDENTIAL = carscreds\n);\n\n\n\nCREATE EXTERNAL FILE FORMAT parquet_format\nWITH ( FORMAT_TYPE = PARQUET );",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashDedicatedpool",
+				"poolName": "YashDedicatedpool"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}

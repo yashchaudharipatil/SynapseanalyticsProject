@@ -1,0 +1,17 @@
+{
+	"name": "Cars_credntials",
+	"properties": {
+		"content": {
+			"query": "CREATE DATABASE SCOPED CREDENTIAL yash_cred\nWITH IDENTITY = 'Managed Identity';\n\n\nCREATE EXTERNAL DATA SOURCE gold_ext_source\nWITH (\n    LOCATION = 'https://storageaccount336699.blob.core.windows.net/gold',\n    CREDENTIAL = yash_cred\n);\n\n\n\nSELECT *\nFROM OPENROWSET(\n    BULK 'dim_model_gold/',\n    DATA_SOURCE = 'gold_ext_source',\n    FORMAT = 'PARQUET'\n) AS rows;\n",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"databaseName": "YashSeverless",
+				"poolName": "Built-in"
+			},
+			"resultLimit": -1
+		},
+		"type": "SqlQuery"
+	}
+}
